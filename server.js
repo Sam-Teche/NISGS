@@ -31,6 +31,7 @@ app.use(
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     res.setHeader("Cross-Origin-Embedder-Policy", "unsafe-none");
+    res.setHeader("Referrer-Policy", "no-referrer-when-downgrade"); // ← ADD THIS LINE
     if (req.method === "OPTIONS") {
       res.sendStatus(200);
       return;
@@ -44,6 +45,7 @@ app.use(
         res.setHeader("Content-Disposition", "inline");
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        res.setHeader("Referrer-Policy", "no-referrer-when-downgrade"); // ← ADD THIS LINE
       }
       if (/\.(jpg|jpeg|png|webp|gif)$/i.test(filePath)) {
         res.setHeader("Access-Control-Allow-Origin", "*");

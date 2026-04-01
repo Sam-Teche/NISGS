@@ -1,6 +1,6 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document } from "mongoose";
 
-export type MaterialType = 'lecture_note' | 'past_question';
+export type MaterialType = "lecture_note" | "past_question";
 
 export interface IMaterial extends Document {
   type: MaterialType;
@@ -11,11 +11,16 @@ export interface IMaterial extends Document {
   fileUrl: string;
   fileName: string;
   fileSize: number;
+  storagePath?: string;
   uploadedAt: Date;
 }
 
 const MaterialSchema = new Schema<IMaterial>({
-  type: { type: String, enum: ['lecture_note', 'past_question'], required: true },
+  type: {
+    type: String,
+    enum: ["lecture_note", "past_question"],
+    required: true,
+  },
   courseCode: { type: String, required: true, uppercase: true, trim: true },
   courseTitle: { type: String, required: true, trim: true },
   part: { type: Number, required: true, min: 1, max: 5 },
@@ -23,9 +28,10 @@ const MaterialSchema = new Schema<IMaterial>({
   fileUrl: { type: String, required: true },
   fileName: { type: String, required: true },
   fileSize: { type: Number, required: true },
-  uploadedAt: { type: Date, default: Date.now }
+  storagePath: { type: String, default: null },
+  uploadedAt: { type: Date, default: Date.now },
 });
 
-MaterialSchema.index({ courseCode: 'text', courseTitle: 'text' });
+MaterialSchema.index({ courseCode: "text", courseTitle: "text" });
 
-export default mongoose.model<IMaterial>('Material', MaterialSchema);
+export default mongoose.model<IMaterial>("Material", MaterialSchema);

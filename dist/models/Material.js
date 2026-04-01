@@ -35,7 +35,11 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const MaterialSchema = new mongoose_1.Schema({
-    type: { type: String, enum: ['lecture_note', 'past_question'], required: true },
+    type: {
+        type: String,
+        enum: ["lecture_note", "past_question"],
+        required: true,
+    },
     courseCode: { type: String, required: true, uppercase: true, trim: true },
     courseTitle: { type: String, required: true, trim: true },
     part: { type: Number, required: true, min: 1, max: 5 },
@@ -43,7 +47,8 @@ const MaterialSchema = new mongoose_1.Schema({
     fileUrl: { type: String, required: true },
     fileName: { type: String, required: true },
     fileSize: { type: Number, required: true },
-    uploadedAt: { type: Date, default: Date.now }
+    storagePath: { type: String, default: null },
+    uploadedAt: { type: Date, default: Date.now },
 });
-MaterialSchema.index({ courseCode: 'text', courseTitle: 'text' });
-exports.default = mongoose_1.default.model('Material', MaterialSchema);
+MaterialSchema.index({ courseCode: "text", courseTitle: "text" });
+exports.default = mongoose_1.default.model("Material", MaterialSchema);

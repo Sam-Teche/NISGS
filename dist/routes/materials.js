@@ -4,10 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const path_1 = __importDefault(require("path"));
 const Material_1 = __importDefault(require("../models/Material"));
 const auth_1 = require("../middleware/auth");
-const upload_1 = require("../middleware/upload");
 const router = express_1.default.Router();
 // Get materials (student or admin)
 router.get("/", auth_1.studentMiddleware, async (req, res) => {
@@ -35,63 +33,26 @@ router.get("/", auth_1.studentMiddleware, async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
-// View PDF in browser (authenticated)
-router.get("/:id/view", auth_1.studentMiddleware, async (req, res) => {
+// Upload material (admin only) — accepts JSON body with Firebase URL
+router.post("/", auth_1.adminMiddleware, async (req, res) => {
     try {
-        const material = await Material_1.default.findById(req.params.id);
-        if (!material)
-            return res.status(404).json({ message: "Material not found" });
-        const filename = path_1.default.basename(material.fileUrl);
-        const filePath = path_1.default.join(__dirname, "../../uploads/materials", filename);
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", "inline");
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-        res.sendFile(filePath, (err) => {
-            if (err)
-                res.status(404).json({ message: "File not found on server" });
-        });
-    }
-    catch {
-        res.status(500).json({ message: "Server error" });
-    }
-});
-// Download PDF (authenticated, forces download)
-router.get("/:id/download", auth_1.studentMiddleware, async (req, res) => {
-    try {
-        const material = await Material_1.default.findById(req.params.id);
-        if (!material)
-            return res.status(404).json({ message: "Material not found" });
-        const filename = path_1.default.basename(material.fileUrl);
-        const filePath = path_1.default.join(__dirname, "../../uploads/materials", filename);
-        const downloadName = `${material.courseCode}_${material.courseTitle}${material.year ? "_" + material.year : ""}.pdf`.replace(/[^a-zA-Z0-9_\-.]/g, "_");
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", `attachment; filename="${downloadName}"`);
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-        res.download(filePath, downloadName, (err) => {
-            if (err)
-                res.status(404).json({ message: "File not found on server" });
-        });
-    }
-    catch {
-        res.status(500).json({ message: "Server error" });
-    }
-});
-// Upload material (admin only)
-router.post("/", auth_1.adminMiddleware, upload_1.pdfUpload.single("file"), async (req, res) => {
-    try {
-        if (!req.file)
-            return res.status(400).json({ message: "PDF file required" });
+        const { type, courseCode, courseTitle, part, year, fileUrl, fileName, fileSize, storagePath, } = req.body;
+        if (!fileUrl)
+            return res.status(400).json({ message: "fileUrl is required" });
+        if (!fileName)
+            return res.status(400).json({ message: "fileName is required" });
+        if (!fileSize)
+            return res.status(400).json({ message: "fileSize is required" });
         const material = await Material_1.default.create({
-            type: req.body.type,
-            courseCode: req.body.courseCode.toUpperCase().trim(),
-            courseTitle: req.body.courseTitle.trim(),
-            part: Number(req.body.part),
-            year: req.body.year || undefined,
-            fileUrl: `/uploads/materials/${req.file.filename}`,
-            fileName: req.file.originalname,
-            fileSize: req.file.size,
+            type,
+            courseCode: courseCode.toUpperCase().trim(),
+            courseTitle: courseTitle.trim(),
+            part: Number(part),
+            year: year || undefined,
+            fileUrl,
+            fileName,
+            fileSize: Number(fileSize),
+            storagePath: storagePath || null,
         });
         res.status(201).json(material);
     }

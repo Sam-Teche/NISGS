@@ -4,10 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const https_1 = __importDefault(require("https"));
 const Material_1 = __importDefault(require("../models/Material"));
 const auth_1 = require("../middleware/auth");
 const router = express_1.default.Router();
-// Get materials (student or admin)
+// ── Get materials (student or admin) ──
 router.get("/", auth_1.studentMiddleware, async (req, res) => {
     try {
         const { type, part, search, courseCode } = req.query;
@@ -33,7 +34,30 @@ router.get("/", auth_1.studentMiddleware, async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
-// Upload material (admin only) — accepts JSON body with Firebase URL
+// ── Proxy route — fetches from Cloudinary and streams to student ──
+router.get("/:id/file", auth_1.studentMiddleware, async (req, res) => {
+    try {
+        const material = await Material_1.default.findById(req.params.id);
+        if (!material)
+            return res.status(404).json({ message: "Material not found" });
+        const isDownload = req.query.download === "true";
+        const fileName = `${material.courseCode}_${material.courseTitle}.pdf`.replace(/[^a-zA-Z0-9_\-.]/g, "_");
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Content-Disposition", isDownload ? `attachment; filename="${fileName}"` : "inline");
+        https_1.default
+            .get(material.fileUrl, (stream) => {
+            stream.pipe(res);
+        })
+            .on("error", () => {
+            res.status(500).json({ message: "Failed to fetch file from storage" });
+        });
+    }
+    catch {
+        res.status(500).json({ message: "Server error" });
+    }
+});
+// ── Upload material (admin only) — accepts JSON body with Cloudinary URL ──
 router.post("/", auth_1.adminMiddleware, async (req, res) => {
     try {
         const { type, courseCode, courseTitle, part, year, fileUrl, fileName, fileSize, storagePath, } = req.body;
@@ -60,7 +84,7 @@ router.post("/", auth_1.adminMiddleware, async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
-// Delete material
+// ── Delete material ──
 router.delete("/:id", auth_1.adminMiddleware, async (req, res) => {
     try {
         await Material_1.default.findByIdAndDelete(req.params.id);

@@ -35,6 +35,7 @@ router.get("/", auth_1.studentMiddleware, async (req, res) => {
     }
 });
 // ── Proxy route — fetches from Cloudinary and streams to student ──
+// ── Proxy route — fetches from Cloudinary and streams to student ──
 router.get("/:id/file", auth_1.studentMiddleware, async (req, res) => {
     try {
         const material = await Material_1.default.findById(req.params.id);
@@ -42,11 +43,25 @@ router.get("/:id/file", auth_1.studentMiddleware, async (req, res) => {
             return res.status(404).json({ message: "Material not found" });
         const isDownload = req.query.download === "true";
         const fileName = `${material.courseCode}_${material.courseTitle}.pdf`.replace(/[^a-zA-Z0-9_\-.]/g, "_");
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.setHeader("Content-Disposition", isDownload ? `attachment; filename="${fileName}"` : "inline");
         https_1.default
             .get(material.fileUrl, (stream) => {
+            // Forward ALL headers from Cloudinary response
+            res.setHeader("Content-Type", stream.headers["content-type"] || "application/pdf");
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            if (stream.headers["content-length"]) {
+                res.setHeader("Content-Length", stream.headers["content-length"]);
+            }
+            if (stream.headers["content-encoding"]) {
+                res.setHeader("Content-Encoding", stream.headers["content-encoding"]);
+            }
+            res.setHeader("Content-Disposition", isDownload ? `attachment; filename="${fileName}"` : "inline");
+            // Check if Cloudinary returned an error status
+            if (stream.statusCode !== 200) {
+                res
+                    .status(stream.statusCode || 500)
+                    .json({ message: "File not accessible from storage" });
+                return;
+            }
             stream.pipe(res);
         })
             .on("error", () => {

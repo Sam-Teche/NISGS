@@ -44,41 +44,55 @@ router.get("/:id/file", studentMiddleware, async (req, res) => {
         "_",
       );
 
-    https
-      .get(material.fileUrl, (stream) => {
-        // Forward ALL headers from Cloudinary response
-        res.setHeader(
-          "Content-Type",
-          stream.headers["content-type"] || "application/pdf",
-        );
-        res.setHeader("Access-Control-Allow-Origin", "*");
+    // Use node-fetch style with built-in https
+    const https = require("https");
+    const url = material.fileUrl;
 
-        if (stream.headers["content-length"]) {
-          res.setHeader("Content-Length", stream.headers["content-length"]);
+    const request = https.get(url, (stream: any) => {
+      if (stream.statusCode !== 200) {
+        res
+          .status(502)
+          .json({ message: `Storage returned ${stream.statusCode}` });
+        stream.resume(); // drain the response
+        return;
+      }
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader(
+        "Content-Disposition",
+        isDownload ? `attachment; filename="${fileName}"` : "inline",
+      );
+
+      if (stream.headers["content-length"]) {
+        res.setHeader("Content-Length", stream.headers["content-length"]);
+      }
+
+      stream.on("error", (err: any) => {
+        console.error("Stream error:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ message: "Stream error" });
         }
-        if (stream.headers["content-encoding"]) {
-          res.setHeader("Content-Encoding", stream.headers["content-encoding"]);
-        }
-
-        res.setHeader(
-          "Content-Disposition",
-          isDownload ? `attachment; filename="${fileName}"` : "inline",
-        );
-
-        // Check if Cloudinary returned an error status
-        if (stream.statusCode !== 200) {
-          res
-            .status(stream.statusCode || 500)
-            .json({ message: "File not accessible from storage" });
-          return;
-        }
-
-        stream.pipe(res);
-      })
-      .on("error", () => {
-        res.status(500).json({ message: "Failed to fetch file from storage" });
       });
-  } catch {
+
+      stream.pipe(res);
+    });
+
+    request.on("error", (err: any) => {
+      console.error("Request error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ message: "Failed to fetch file" });
+      }
+    });
+
+    request.setTimeout(30000, () => {
+      request.destroy();
+      if (!res.headersSent) {
+        res.status(504).json({ message: "Request timed out" });
+      }
+    });
+  } catch (err: any) {
+    console.error("Proxy route error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

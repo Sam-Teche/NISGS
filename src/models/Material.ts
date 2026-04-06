@@ -9,6 +9,7 @@ export interface IMaterial extends Document {
   part: number;
   year?: string;
   fileUrl: string;
+  downloadUrl?: string; // ← ADD THIS
   fileName: string;
   fileSize: number;
   storagePath?: string;
@@ -26,8 +27,9 @@ const MaterialSchema = new Schema<IMaterial>({
   part: { type: Number, required: true, min: 1, max: 5 },
   year: { type: String, trim: true },
   fileUrl: { type: String, required: true },
+  downloadUrl: { type: String, default: null }, // ← ADD THIS
   fileName: { type: String, required: true },
-  fileSize: { type: Number, required: true },
+  fileSize: { type: Number, default: 0 },
   storagePath: { type: String, default: null },
   uploadedAt: { type: Date, default: Date.now },
 });

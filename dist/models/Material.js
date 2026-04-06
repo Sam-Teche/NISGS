@@ -46,8 +46,8 @@ const MaterialSchema = new mongoose_1.Schema({
     year: { type: String, trim: true },
     fileUrl: { type: String, required: true },
     downloadUrl: { type: String, default: null }, // ← ADD THIS
-    fileName: { type: String, required: true },
-    fileSize: { type: Number, default: 0 },
+    // fileName: { type: String, required: true },
+    // fileSize: { type: Number, default: 0 },
     storagePath: { type: String, default: null },
     uploadedAt: { type: Date, default: Date.now },
 });

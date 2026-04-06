@@ -88,13 +88,16 @@ router.get("/:id/file", auth_1.studentMiddleware, async (req, res) => {
 // ── Upload material (admin only) — accepts JSON body with Cloudinary URL ──
 router.post("/", auth_1.adminMiddleware, async (req, res) => {
     try {
-        const { type, courseCode, courseTitle, part, year, fileUrl, fileName, fileSize, storagePath, } = req.body;
+        const { type, courseCode, courseTitle, part, year, fileUrl, 
+        // fileName,
+        // fileSize,
+        storagePath, } = req.body;
         if (!fileUrl)
             return res.status(400).json({ message: "fileUrl is required" });
-        if (!fileName)
-            return res.status(400).json({ message: "fileName is required" });
-        if (!fileSize)
-            return res.status(400).json({ message: "fileSize is required" });
+        // if (!fileName)
+        //   return res.status(400).json({ message: "fileName is required" });
+        // if (!fileSize)
+        //   return res.status(400).json({ message: "fileSize is required" });
         const material = await Material_1.default.create({
             type,
             courseCode: courseCode.toUpperCase().trim(),
@@ -102,8 +105,8 @@ router.post("/", auth_1.adminMiddleware, async (req, res) => {
             part: Number(part),
             year: year || undefined,
             fileUrl,
-            fileName,
-            fileSize: Number(fileSize),
+            // fileName,
+            // fileSize: Number(fileSize),
             storagePath: storagePath || null,
         });
         res.status(201).json(material);

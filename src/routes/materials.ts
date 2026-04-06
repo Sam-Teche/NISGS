@@ -107,16 +107,16 @@ router.post("/", adminMiddleware, async (req, res) => {
       part,
       year,
       fileUrl,
-      fileName,
-      fileSize,
+      // fileName,
+      // fileSize,
       storagePath,
     } = req.body;
     if (!fileUrl)
       return res.status(400).json({ message: "fileUrl is required" });
-    if (!fileName)
-      return res.status(400).json({ message: "fileName is required" });
-    if (!fileSize)
-      return res.status(400).json({ message: "fileSize is required" });
+    // if (!fileName)
+    //   return res.status(400).json({ message: "fileName is required" });
+    // if (!fileSize)
+    //   return res.status(400).json({ message: "fileSize is required" });
 
     const material = await Material.create({
       type,
@@ -125,8 +125,8 @@ router.post("/", adminMiddleware, async (req, res) => {
       part: Number(part),
       year: year || undefined,
       fileUrl,
-      fileName,
-      fileSize: Number(fileSize),
+      // fileName,
+      // fileSize: Number(fileSize),
       storagePath: storagePath || null,
     });
     res.status(201).json(material);

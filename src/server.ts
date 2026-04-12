@@ -12,6 +12,7 @@ const app = express();
 app.use(
   cors({
     origin: [
+      "https://nisgsoauadmin.netlify.app",
       "https://nisgsoau.netlify.app",
       "http://localhost:3000",
       "http://localhost:3001",

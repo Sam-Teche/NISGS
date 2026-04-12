@@ -13,7 +13,7 @@ const app = (0, express_1.default)();
 // ✅ Add this CORS config
 app.use((0, cors_1.default)({
     origin: [
-        "https://thriving-hotteok-8cba12.netlify.app",
+        "https://nisgsoau.netlify.app",
         "http://localhost:3000",
         "http://localhost:3001",
     ],

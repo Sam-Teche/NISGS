@@ -67,4 +67,4 @@ router.delete("/:id", adminMiddleware, async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router;

@@ -60,4 +60,4 @@ router.delete("/:id", auth_1.adminMiddleware, async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
-exports.default = router;
+module.exports = router;

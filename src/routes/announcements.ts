@@ -134,4 +134,4 @@ router.get("/students-for-exclusion", adminMiddleware, async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router;

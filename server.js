@@ -6,6 +6,14 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import dotenv from "dotenv";
 
+// ✅ Routes using import instead of require
+import authRoutes from "./routes/auth.js";
+import excoRoutes from "./routes/exco.js";
+import lecturersRoutes from "./routes/lecturers.js";
+import materialsRoutes from "./routes/materials.js";
+import announcementsRoutes from "./routes/announcements.js";
+import studentsRoutes from "./routes/students.js";
+
 // ✅ ES Module replacements for __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -63,14 +71,6 @@ app.use(
     },
   }),
 );
-
-// ✅ Routes using import instead of require
-import authRoutes from "./routes/auth.js";
-import excoRoutes from "./routes/exco.js";
-import lecturersRoutes from "./routes/lecturers.js";
-import materialsRoutes from "./routes/materials.js";
-import announcementsRoutes from "./routes/announcements.js";
-import studentsRoutes from "./routes/students.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/exco", excoRoutes);

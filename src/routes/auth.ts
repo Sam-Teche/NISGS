@@ -57,5 +57,4 @@ router.post("/student/login", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
-module.exports = router;
+export default router;

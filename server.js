@@ -1,12 +1,21 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const path = require("path");
-require("dotenv").config();
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import dotenv from "dotenv";
+
+// ✅ ES Module replacements for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// ✅ dotenv using import instead of require
+dotenv.config();
 
 const app = express();
 
-// ── API CORS — only your frontend & admin can call the API ──
+// ── API CORS ──
 app.use(
   cors({
     origin: [
@@ -23,7 +32,7 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── Uploads CORS — open for files only (PDFs/images need this to load in browser) ──
+// ── Uploads CORS ──
 app.use(
   "/uploads",
   (req, res, next) => {
@@ -31,7 +40,7 @@ app.use(
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     res.setHeader("Cross-Origin-Embedder-Policy", "unsafe-none");
-    res.setHeader("Referrer-Policy", "no-referrer-when-downgrade"); // ← ADD THIS LINE
+    res.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
     if (req.method === "OPTIONS") {
       res.sendStatus(200);
       return;
@@ -45,7 +54,7 @@ app.use(
         res.setHeader("Content-Disposition", "inline");
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-        res.setHeader("Referrer-Policy", "no-referrer-when-downgrade"); // ← ADD THIS LINE
+        res.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
       }
       if (/\.(jpg|jpeg|png|webp|gif)$/i.test(filePath)) {
         res.setHeader("Access-Control-Allow-Origin", "*");
@@ -55,13 +64,20 @@ app.use(
   }),
 );
 
-// Routes
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/exco", require("./routes/exco"));
-app.use("/api/lecturers", require("./routes/lecturers"));
-app.use("/api/materials", require("./routes/materials"));
-app.use("/api/announcements", require("./routes/announcements"));
-app.use("/api/students", require("./routes/students"));
+// ✅ Routes using import instead of require
+import authRoutes from "./routes/auth.js";
+import excoRoutes from "./routes/exco.js";
+import lecturersRoutes from "./routes/lecturers.js";
+import materialsRoutes from "./routes/materials.js";
+import announcementsRoutes from "./routes/announcements.js";
+import studentsRoutes from "./routes/students.js";
+
+app.use("/api/auth", authRoutes);
+app.use("/api/exco", excoRoutes);
+app.use("/api/lecturers", lecturersRoutes);
+app.use("/api/materials", materialsRoutes);
+app.use("/api/announcements", announcementsRoutes);
+app.use("/api/students", studentsRoutes);
 
 app.get("/api/health", (req, res) =>
   res.json({ status: "NISGS Backend Running" }),
@@ -69,17 +85,11 @@ app.get("/api/health", (req, res) =>
 
 const PORT = process.env.PORT || 5000;
 
-// Start server FIRST
 app.listen(PORT, () => {
   console.log(`🚀 NISGS Backend running on port ${PORT}`);
 });
 
-// Then connect to MongoDB
 mongoose
   .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/nisgs")
-  .then(() => {
-    console.log("✅ MongoDB connected");
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB error:", err);
-  });
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("❌ MongoDB error:", err));

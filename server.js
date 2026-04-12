@@ -83,6 +83,13 @@ app.get("/api/health", (req, res) =>
   res.json({ status: "NISGS Backend Running" }),
 );
 
+app.get("/api/debug", (req, res) => {
+  res.json({
+    FRONTEND_URL: process.env.FRONTEND_URL,
+    ADMIN_URL: process.env.ADMIN_URL,
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

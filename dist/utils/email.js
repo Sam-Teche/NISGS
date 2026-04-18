@@ -48,11 +48,11 @@ const sendAnnouncementEmail = async (recipients, title, content) => {
     const batchSize = 50;
     for (let i = 0; i < recipients.length; i += batchSize) {
         const batch = recipients.slice(i, i + batchSize);
-        await Promise.allSettled(batch.map(r => resend.emails.send({
-            from: process.env.FROM_EMAIL || 'NISGS <noreply@nisgs.edu.ng>',
+        await Promise.allSettled(batch.map((r) => resend.emails.send({
+            from: process.env.FROM_EMAIL || "NISGS <onboarding@resend.dev>",
             to: r.email,
             subject: `[NISGS] ${title}`,
-            html: emailHtml
+            html: emailHtml,
         })));
     }
 };

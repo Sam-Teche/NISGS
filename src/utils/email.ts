@@ -1,11 +1,11 @@
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendAnnouncementEmail = async (
   recipients: { email: string; name: string }[],
   title: string,
-  content: string
+  content: string,
 ): Promise<void> => {
   if (!recipients.length) return;
 
@@ -53,14 +53,14 @@ export const sendAnnouncementEmail = async (
   for (let i = 0; i < recipients.length; i += batchSize) {
     const batch = recipients.slice(i, i + batchSize);
     await Promise.allSettled(
-      batch.map(r =>
+      batch.map((r) =>
         resend.emails.send({
-          from: process.env.FROM_EMAIL || 'NISGS <noreply@nisgs.edu.ng>',
+          from: process.env.FROM_EMAIL || "NISGS <onboarding@resend.dev>",
           to: r.email,
           subject: `[NISGS] ${title}`,
-          html: emailHtml
-        })
-      )
+          html: emailHtml,
+        }),
+      ),
     );
   }
 };

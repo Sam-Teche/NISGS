@@ -26,37 +26,91 @@ router.get("/", adminMiddleware, async (req, res) => {
   }
 });
 
-// ── Add single student ──
-router.post(
-  "/",
-  adminMiddleware,
-  imageUpload.single("photo"),
-  async (req, res) => {
-    try {
-      const { matricNumber, surname, firstName, email, part } = req.body;
-      const existing = await Student.findOne({
-        matricNumber: matricNumber.toUpperCase().trim(),
-      });
-      if (existing)
-        return res
-          .status(400)
-          .json({ message: "Matric number already registered" });
-      const student = await Student.create({
-        matricNumber: matricNumber.toUpperCase().trim(),
-        surname: surname.trim(),
-        firstName: firstName.trim(),
-        email: email.trim().toLowerCase(),
-        part: Number(part),
-        photo: req.file ? `/uploads/images/${req.file.filename}` : null,
-      });
-      res.status(201).json(student);
-    } catch (err: any) {
-      res.status(500).json({ message: err.message || "Server error" });
-    }
-  },
-);
+// ── Class stats — MUST be before /:id routes ──
+router.get("/class/stats", adminMiddleware, async (_req, res) => {
+  try {
+    const stats = await Student.aggregate([
+      {
+        $group: {
+          _id: "$part",
+          count: { $sum: 1 },
+          active: { $sum: { $cond: ["$isActive", 1, 0] } },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+    res.json(stats);
+  } catch {
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
-// ── Bulk add students ──
+// ── UPGRADE specific class — MUST be before /:id routes ──
+router.patch("/class/upgrade", adminMiddleware, async (req, res) => {
+  try {
+    const { fromPart, toPart } = req.body;
+    const from = Number(fromPart);
+    const to = Number(toPart);
+    if (!from || !to || from < 1 || from > 5 || to < 1 || to > 5) {
+      return res
+        .status(400)
+        .json({ message: "fromPart and toPart must be between 1 and 5" });
+    }
+    if (from === to)
+      return res
+        .status(400)
+        .json({ message: "fromPart and toPart must be different" });
+    const result = await Student.updateMany(
+      { part: from },
+      { $set: { part: to } },
+    );
+    res.json({
+      message: `Moved ${result.modifiedCount} student(s) from Part ${from} to Part ${to}`,
+      updated: result.modifiedCount,
+    });
+  } catch {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── UPGRADE ALL classes — MUST be before /:id routes ──
+router.patch("/class/upgrade-all", adminMiddleware, async (req, res) => {
+  try {
+    const results: string[] = [];
+    for (let part = 4; part >= 1; part--) {
+      const result = await Student.updateMany(
+        { part },
+        { $set: { part: part + 1 } },
+      );
+      if (result.modifiedCount > 0) {
+        results.push(
+          `Part ${part} → Part ${part + 1}: ${result.modifiedCount} student(s)`,
+        );
+      }
+    }
+    res.json({ message: "All classes upgraded", details: results });
+  } catch {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── DELETE entire class — MUST be before /:id routes ──
+router.delete("/class/:part", adminMiddleware, async (req, res) => {
+  try {
+    const part = Number(req.params.part);
+    if (part < 1 || part > 5)
+      return res.status(400).json({ message: "Invalid part (1–5)" });
+    const result = await Student.deleteMany({ part });
+    res.json({
+      message: `Deleted ${result.deletedCount} student(s) from Part ${part}`,
+      deleted: result.deletedCount,
+    });
+  } catch {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── Bulk add students — MUST be before /:id routes ──
 router.post("/bulk", adminMiddleware, async (req, res) => {
   try {
     const { students } = req.body;
@@ -110,6 +164,36 @@ router.post("/bulk", adminMiddleware, async (req, res) => {
   }
 });
 
+// ── Add single student ──
+router.post(
+  "/",
+  adminMiddleware,
+  imageUpload.single("photo"),
+  async (req, res) => {
+    try {
+      const { matricNumber, surname, firstName, email, part } = req.body;
+      const existing = await Student.findOne({
+        matricNumber: matricNumber.toUpperCase().trim(),
+      });
+      if (existing)
+        return res
+          .status(400)
+          .json({ message: "Matric number already registered" });
+      const student = await Student.create({
+        matricNumber: matricNumber.toUpperCase().trim(),
+        surname: surname.trim(),
+        firstName: firstName.trim(),
+        email: email.trim().toLowerCase(),
+        part: Number(part),
+        photo: req.file ? `/uploads/images/${req.file.filename}` : null,
+      });
+      res.status(201).json(student);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Server error" });
+    }
+  },
+);
+
 // ── Update student ──
 router.put(
   "/:id",
@@ -133,16 +217,6 @@ router.put(
   },
 );
 
-// ── Delete single student ──
-router.delete("/:id", adminMiddleware, async (req, res) => {
-  try {
-    await Student.findByIdAndDelete(req.params.id);
-    res.json({ message: "Student removed" });
-  } catch {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
 // ── Toggle active ──
 router.patch("/:id/toggle", adminMiddleware, async (req, res) => {
   try {
@@ -156,85 +230,11 @@ router.patch("/:id/toggle", adminMiddleware, async (req, res) => {
   }
 });
 
-// ── DELETE entire class ──
-router.delete("/class/:part", adminMiddleware, async (req, res) => {
+// ── Delete single student ──
+router.delete("/:id", adminMiddleware, async (req, res) => {
   try {
-    const part = Number(req.params.part);
-    if (part < 1 || part > 5)
-      return res.status(400).json({ message: "Invalid part (1–5)" });
-    const result = await Student.deleteMany({ part });
-    res.json({
-      message: `Deleted ${result.deletedCount} student(s) from Part ${part}`,
-      deleted: result.deletedCount,
-    });
-  } catch {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// ── UPGRADE specific class ──
-router.patch("/class/upgrade", adminMiddleware, async (req, res) => {
-  try {
-    const { fromPart, toPart } = req.body;
-    const from = Number(fromPart);
-    const to = Number(toPart);
-    if (!from || !to || from < 1 || from > 5 || to < 1 || to > 5) {
-      return res
-        .status(400)
-        .json({ message: "fromPart and toPart must be between 1 and 5" });
-    }
-    if (from === to)
-      return res
-        .status(400)
-        .json({ message: "fromPart and toPart must be different" });
-    const result = await Student.updateMany(
-      { part: from },
-      { $set: { part: to } },
-    );
-    res.json({
-      message: `Moved ${result.modifiedCount} student(s) from Part ${from} to Part ${to}`,
-      updated: result.modifiedCount,
-    });
-  } catch {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// ── UPGRADE ALL classes ──
-router.patch("/class/upgrade-all", adminMiddleware, async (req, res) => {
-  try {
-    const results: string[] = [];
-    for (let part = 4; part >= 1; part--) {
-      const result = await Student.updateMany(
-        { part },
-        { $set: { part: part + 1 } },
-      );
-      if (result.modifiedCount > 0) {
-        results.push(
-          `Part ${part} → Part ${part + 1}: ${result.modifiedCount} student(s)`,
-        );
-      }
-    }
-    res.json({ message: "All classes upgraded", details: results });
-  } catch {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// ── Class stats ──
-router.get("/class/stats", adminMiddleware, async (_req, res) => {
-  try {
-    const stats = await Student.aggregate([
-      {
-        $group: {
-          _id: "$part",
-          count: { $sum: 1 },
-          active: { $sum: { $cond: ["$isActive", 1, 0] } },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
-    res.json(stats);
+    await Student.findByIdAndDelete(req.params.id);
+    res.json({ message: "Student removed" });
   } catch {
     res.status(500).json({ message: "Server error" });
   }

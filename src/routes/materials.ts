@@ -29,6 +29,73 @@ router.get("/", studentMiddleware, async (req, res) => {
   }
 });
 
+// ── Bulk add materials ──
+router.post("/bulk", adminMiddleware, async (req, res) => {
+  try {
+    const { materials } = req.body;
+    if (!Array.isArray(materials) || materials.length === 0) {
+      return res.status(400).json({ message: "No materials provided" });
+    }
+
+    const results = { added: 0, skipped: 0, errors: [] as string[] };
+
+    for (const m of materials) {
+      try {
+        const fileUrl = String(m.fileUrl || "").trim();
+        const courseCode = String(m.courseCode || "")
+          .trim()
+          .toUpperCase();
+        const courseTitle = String(m.courseTitle || "").trim();
+        const part = Number(m.part);
+        const type = String(m.type || "").trim();
+        const fileName = String(m.fileName || courseCode + ".pdf").trim();
+
+        if (!fileUrl || !courseCode || !courseTitle || !part || !type) {
+          results.errors.push(
+            `Skipped — missing fields: ${courseCode || "unknown"}`,
+          );
+          results.skipped++;
+          continue;
+        }
+
+        // Extract Google Drive ID and build URLs
+        const driveMatch = fileUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+        const driveId = driveMatch ? driveMatch[1] : null;
+        const finalFileUrl = driveId
+          ? `https://drive.google.com/file/d/${driveId}/view`
+          : fileUrl;
+        const downloadUrl = driveId
+          ? `https://drive.google.com/uc?export=download&id=${driveId}`
+          : fileUrl;
+
+        await Material.create({
+          type,
+          courseCode,
+          courseTitle,
+          part,
+          year: m.year || undefined,
+          fileUrl: finalFileUrl,
+          downloadUrl,
+          fileName,
+          fileSize: 0,
+          storagePath: null,
+        });
+        results.added++;
+      } catch (err: any) {
+        results.errors.push(`Error: ${err.message}`);
+        results.skipped++;
+      }
+    }
+
+    res.status(201).json({
+      message: `${results.added} material(s) added, ${results.skipped} skipped`,
+      ...results,
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ── Proxy route — fetches from Cloudinary and streams to student ──
 // ── Proxy route — fetches from Cloudinary and streams to student ──
 router.get("/:id/file", studentMiddleware, async (req, res) => {

@@ -8,7 +8,7 @@ const Student_1 = __importDefault(require("../models/Student"));
 const auth_1 = require("../middleware/auth");
 const upload_1 = require("../middleware/upload");
 const router = express_1.default.Router();
-// Get all students (admin) with search
+// ── Get all students ──
 router.get("/", auth_1.adminMiddleware, async (req, res) => {
     try {
         const { search, part } = req.query;
@@ -30,7 +30,7 @@ router.get("/", auth_1.adminMiddleware, async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
-// Add student
+// ── Add single student ──
 router.post("/", auth_1.adminMiddleware, upload_1.imageUpload.single("photo"), async (req, res) => {
     try {
         const { matricNumber, surname, firstName, email, part } = req.body;
@@ -55,7 +55,54 @@ router.post("/", auth_1.adminMiddleware, upload_1.imageUpload.single("photo"), a
         res.status(500).json({ message: err.message || "Server error" });
     }
 });
-// Update student
+// ── Bulk add students ──
+router.post("/bulk", auth_1.adminMiddleware, async (req, res) => {
+    try {
+        const { students } = req.body;
+        if (!Array.isArray(students) || students.length === 0) {
+            return res.status(400).json({ message: "No students provided" });
+        }
+        const results = { added: 0, skipped: 0, errors: [] };
+        for (const s of students) {
+            try {
+                const matricNumber = String(s.matricNumber || "")
+                    .toUpperCase()
+                    .trim();
+                const surname = String(s.surname || "").trim();
+                const firstName = String(s.firstName || "").trim();
+                const email = String(s.email || "")
+                    .trim()
+                    .toLowerCase();
+                const part = Number(s.part);
+                if (!matricNumber || !surname || !firstName || !email || !part) {
+                    results.errors.push(`Skipped row — missing fields: ${matricNumber || "unknown"}`);
+                    results.skipped++;
+                    continue;
+                }
+                const existing = await Student_1.default.findOne({ matricNumber });
+                if (existing) {
+                    results.errors.push(`${matricNumber} already exists — skipped`);
+                    results.skipped++;
+                    continue;
+                }
+                await Student_1.default.create({ matricNumber, surname, firstName, email, part });
+                results.added++;
+            }
+            catch (err) {
+                results.errors.push(`Error: ${err.message}`);
+                results.skipped++;
+            }
+        }
+        res.status(201).json({
+            message: `${results.added} student(s) added, ${results.skipped} skipped`,
+            ...results,
+        });
+    }
+    catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+// ── Update student ──
 router.put("/:id", auth_1.adminMiddleware, upload_1.imageUpload.single("photo"), async (req, res) => {
     try {
         const update = { ...req.body };
@@ -74,17 +121,17 @@ router.put("/:id", auth_1.adminMiddleware, upload_1.imageUpload.single("photo"),
         res.status(500).json({ message: "Server error" });
     }
 });
-// Delete student
+// ── Delete single student ──
 router.delete("/:id", auth_1.adminMiddleware, async (req, res) => {
     try {
         await Student_1.default.findByIdAndDelete(req.params.id);
-        res.json({ message: "Student removed from whitelist" });
+        res.json({ message: "Student removed" });
     }
     catch {
         res.status(500).json({ message: "Server error" });
     }
 });
-// Toggle active
+// ── Toggle active ──
 router.patch("/:id/toggle", auth_1.adminMiddleware, async (req, res) => {
     try {
         const student = await Student_1.default.findById(req.params.id);
@@ -93,6 +140,82 @@ router.patch("/:id/toggle", auth_1.adminMiddleware, async (req, res) => {
         student.isActive = !student.isActive;
         await student.save();
         res.json(student);
+    }
+    catch {
+        res.status(500).json({ message: "Server error" });
+    }
+});
+// ── DELETE entire class ──
+router.delete("/class/:part", auth_1.adminMiddleware, async (req, res) => {
+    try {
+        const part = Number(req.params.part);
+        if (part < 1 || part > 5)
+            return res.status(400).json({ message: "Invalid part (1–5)" });
+        const result = await Student_1.default.deleteMany({ part });
+        res.json({
+            message: `Deleted ${result.deletedCount} student(s) from Part ${part}`,
+            deleted: result.deletedCount,
+        });
+    }
+    catch {
+        res.status(500).json({ message: "Server error" });
+    }
+});
+// ── UPGRADE specific class ──
+router.patch("/class/upgrade", auth_1.adminMiddleware, async (req, res) => {
+    try {
+        const { fromPart, toPart } = req.body;
+        const from = Number(fromPart);
+        const to = Number(toPart);
+        if (!from || !to || from < 1 || from > 5 || to < 1 || to > 5) {
+            return res
+                .status(400)
+                .json({ message: "fromPart and toPart must be between 1 and 5" });
+        }
+        if (from === to)
+            return res
+                .status(400)
+                .json({ message: "fromPart and toPart must be different" });
+        const result = await Student_1.default.updateMany({ part: from }, { $set: { part: to } });
+        res.json({
+            message: `Moved ${result.modifiedCount} student(s) from Part ${from} to Part ${to}`,
+            updated: result.modifiedCount,
+        });
+    }
+    catch {
+        res.status(500).json({ message: "Server error" });
+    }
+});
+// ── UPGRADE ALL classes ──
+router.patch("/class/upgrade-all", auth_1.adminMiddleware, async (req, res) => {
+    try {
+        const results = [];
+        for (let part = 4; part >= 1; part--) {
+            const result = await Student_1.default.updateMany({ part }, { $set: { part: part + 1 } });
+            if (result.modifiedCount > 0) {
+                results.push(`Part ${part} → Part ${part + 1}: ${result.modifiedCount} student(s)`);
+            }
+        }
+        res.json({ message: "All classes upgraded", details: results });
+    }
+    catch {
+        res.status(500).json({ message: "Server error" });
+    }
+});
+// ── Class stats ──
+router.get("/class/stats", auth_1.adminMiddleware, async (_req, res) => {
+    try {
+        const stats = await Student_1.default.aggregate([
+            {
+                $group: {
+                    _id: "$part",
+                    count: { $sum: 1 },
+                    active: { $sum: { $cond: ["$isActive", 1, 0] } },
+                },
+            },
+            { $sort: { _id: 1 } },
+        ]);
+        res.json(stats);
     }
     catch {
         res.status(500).json({ message: "Server error" });

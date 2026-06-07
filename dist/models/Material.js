@@ -45,10 +45,11 @@ const MaterialSchema = new mongoose_1.Schema({
     part: { type: Number, required: true, min: 1, max: 5 },
     year: { type: String, trim: true },
     fileUrl: { type: String, required: true },
-    downloadUrl: { type: String, default: null }, // ← ADD THIS
-    // fileName: { type: String, required: true },
-    // fileSize: { type: Number, default: 0 },
-    storagePath: { type: String, default: null },
+    downloads: { type: Number, default: 0 },
+    storagePath: { type: String, default: null }, // null = legacy Drive file
+    downloadUrl: { type: String },
+    fileName: { type: String },
+    fileSize: { type: Number, default: 0 },
     uploadedAt: { type: Date, default: Date.now },
 });
 MaterialSchema.index({ courseCode: "text", courseTitle: "text" });

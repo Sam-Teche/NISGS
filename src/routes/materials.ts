@@ -111,6 +111,10 @@ router.post(
   upload.single("file"),
   async (req: Request, res: Response) => {
     try {
+      // ── TEMPORARY DEBUG — remove after fix ──
+      console.log("req.body:", req.body);
+      console.log("req.file:", req.file);
+
       const { type, courseCode, courseTitle, part, year } = req.body;
 
       // ── Validation ──

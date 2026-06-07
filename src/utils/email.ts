@@ -55,7 +55,9 @@ export const sendAnnouncementEmail = async (
     await Promise.allSettled(
       batch.map((r) =>
         resend.emails.send({
-          from: process.env.FROM_EMAIL || "NISGS <onboarding@resend.dev>",
+          from:
+            process.env.FROM_EMAIL ||
+            "NISGS OAU <noreply@cryptoneve.com>",
           to: r.email,
           subject: `[NISGS] ${title}`,
           html: emailHtml,

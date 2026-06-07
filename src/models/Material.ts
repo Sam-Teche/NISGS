@@ -8,9 +8,9 @@ export interface IMaterial extends Document {
   courseTitle: string;
   part: number;
   year?: string;
-  fileUrl: string;
+  //fileUrl: string;
   downloads: number;  
-  //downloadUrl?: string; // ← ADD THIS
+  downloadUrl?: string; // ← ADD THIS
   fileName: string;
   fileSize: number;
   storagePath?: string;
@@ -27,10 +27,10 @@ const MaterialSchema = new Schema<IMaterial>({
   courseTitle: { type: String, required: true, trim: true },
   part: { type: Number, required: true, min: 1, max: 5 },
   year: { type: String, trim: true },
-  fileUrl: { type: String, required: true },
+  //fileUrl: { type: String, required: true },
   downloads: { type: Number, default: 0 },
   storagePath: { type: String, default: null }, // null = legacy Drive file
-  // downloadUrl: { type: String },
+  downloadUrl: { type: String },
   fileName: { type: String },
   fileSize: { type: Number, default: 0 },
   uploadedAt: { type: Date, default: Date.now },

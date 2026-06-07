@@ -10,7 +10,7 @@ export interface IMaterial extends Document {
   year?: string;
   fileUrl: string;
   downloads: number;  
-  downloadUrl?: string; // ← ADD THIS
+  //downloadUrl?: string; // ← ADD THIS
   fileName: string;
   fileSize: number;
   storagePath?: string;
@@ -30,7 +30,7 @@ const MaterialSchema = new Schema<IMaterial>({
   fileUrl: { type: String, required: true },
   downloads: { type: Number, default: 0 },
   storagePath: { type: String, default: null }, // null = legacy Drive file
-  downloadUrl: { type: String },
+  // downloadUrl: { type: String },
   fileName: { type: String },
   fileSize: { type: Number, default: 0 },
   uploadedAt: { type: Date, default: Date.now },
